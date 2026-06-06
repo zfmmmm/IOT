@@ -17,7 +17,7 @@ cam1_calib: "right.yaml"
 image_width: 640
 image_height: 480
 
-estimate_extrinsic: 0
+estimate_extrinsic: 1
 
 # Calibrated with Kalibr on d435i_px4_20260606_142203.bag.
 # Kalibr reports T_cam_imu; VINS expects T_imu_cam, so these matrices are the inverse.
@@ -43,27 +43,27 @@ body_T_cam1: !!opencv-matrix
 multiple_thread: 1
 
 # feature tracker parameters
-max_cnt: 150
-min_dist: 30
+max_cnt: 190
+min_dist: 25
 freq: 10
 F_threshold: 1.0
-show_track: 0
+show_track: 1
 flow_back: 1
 
 # optimization parameters
-max_solver_time: 0.04
-max_num_iterations: 8
+max_solver_time: 0.03
+max_num_iterations: 10
 keyframe_parallax: 10.0
 
 # IMU parameters from d435i_px4_20260606_142203-imu.yaml used by Kalibr.
-acc_n: 0.02
-gyr_n: 0.0017
-acc_w: 0.0005
-gyr_w: 3e-05
+acc_n: 0.08
+gyr_n: 0.005
+acc_w: 0.002
+gyr_w: 1e-04
 g_norm: 9.805
 
 # unsynchronization parameters
-estimate_td: 0
+estimate_td: 1
 td: 0.00605930175888
 
 # loop closure parameters
