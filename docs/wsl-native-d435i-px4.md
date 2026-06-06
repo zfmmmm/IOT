@@ -97,6 +97,8 @@ Expected early logs:
 
 That second message is expected. It means the initialization guard is waiting for enough feature tracks, parallax, and IMU rotation before allowing VINS to initialize.
 
+On WSL the native launcher keeps `INITIAL_RESET=false` by default. This is intentional: `realsense2_camera` device reset can make the D435i disappear from the attached WSL USB session.
+
 ## 7. Correct initialization motion
 
 Do this right after the pipeline starts:

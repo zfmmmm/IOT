@@ -63,11 +63,6 @@ extern int MIN_DIST;
 extern double F_THRESHOLD;
 extern int SHOW_TRACK;
 extern int FLOW_BACK;
-extern int INIT_MIN_TRACK_NUM;
-extern int INIT_MIN_LONG_TRACK_NUM;
-extern int INIT_MIN_CORRESPONDENCES;
-extern double INIT_MIN_MOTION_PARALLAX;
-extern double INIT_MIN_GYRO_ANGLE;
 
 void readParameters(std::string config_file);
 

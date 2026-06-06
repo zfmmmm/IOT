@@ -18,7 +18,9 @@ RUN_CAMERA="${RUN_CAMERA:-true}"
 RUN_MAVROS="${RUN_MAVROS:-true}"
 RUN_RVIZ="${RUN_RVIZ:-true}"
 RUN_LOOP="${RUN_LOOP:-false}"
-INITIAL_RESET="${INITIAL_RESET:-true}"
+# RealSense device reset is helpful on native Ubuntu, but under WSL the USB
+# device can disappear from the attached session and never come back.
+INITIAL_RESET="${INITIAL_RESET:-false}"
 
 [[ -f "/opt/ros/${ROS_DISTRO}/setup.bash" ]] || {
   echo "ERROR: ROS ${ROS_DISTRO} is not installed." >&2

@@ -59,7 +59,6 @@ class Estimator
     bool initialStructure();
     bool visualInitialAlign();
     bool relativePose(Matrix3d &relative_R, Vector3d &relative_T, int &l);
-    bool stereoIMUInitReady();
     void slideWindow();
     void slideWindowNew();
     void slideWindowOld();
