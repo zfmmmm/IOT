@@ -1,50 +1,29 @@
 #!/usr/bin/env python3
 import math
-import os
-import select
-import sys
-import termios
 import time
-import tty
 
 import rospy
 from nav_msgs.msg import Odometry
+from std_msgs.msg import Empty
 
 
 class PoseKeyPrinter:
     def __init__(self):
         self.odom_topic = rospy.get_param("~odom_topic", "/vins_estimator/odometry")
-        self.print_key = rospy.get_param("~print_key", "p")
+        self.trigger_topic = rospy.get_param("~trigger_topic", "/vins_estimator/print_pose")
         self.latest = None
         self.first = None
         self.previous = None
         self.count = 0
-        self.tty_fd = None
-        self.old_tty = None
 
         rospy.Subscriber(self.odom_topic, Odometry, self.odom_callback, queue_size=20)
+        rospy.Subscriber(self.trigger_topic, Empty, self.trigger_callback, queue_size=20)
 
     def odom_callback(self, msg):
         self.latest = msg
 
-    def open_tty(self):
-        try:
-            self.tty_fd = os.open("/dev/tty", os.O_RDONLY | os.O_NONBLOCK)
-            self.old_tty = termios.tcgetattr(self.tty_fd)
-            tty.setcbreak(self.tty_fd)
-            return True
-        except Exception as exc:
-            rospy.logerr("Cannot read keyboard from /dev/tty: %s", exc)
-            return False
-
-    def restore_tty(self):
-        if self.tty_fd is not None:
-            try:
-                if self.old_tty is not None:
-                    termios.tcsetattr(self.tty_fd, termios.TCSADRAIN, self.old_tty)
-                os.close(self.tty_fd)
-            except Exception:
-                pass
+    def trigger_callback(self, _msg):
+        self.print_pose()
 
     @staticmethod
     def yaw_from_quaternion(q):
@@ -56,7 +35,13 @@ class PoseKeyPrinter:
     def pose_tuple(msg):
         p = msg.pose.pose.position
         q = msg.pose.pose.orientation
-        return (p.x, p.y, p.z, PoseKeyPrinter.yaw_from_quaternion(q), msg.header.stamp.to_sec())
+        return (
+            p.x,
+            p.y,
+            p.z,
+            PoseKeyPrinter.yaw_from_quaternion(q),
+            msg.header.stamp.to_sec(),
+        )
 
     @staticmethod
     def delta(a, b):
@@ -70,7 +55,10 @@ class PoseKeyPrinter:
 
     def print_pose(self):
         if self.latest is None:
-            print("\n[VINS POSE] No odometry received yet from %s" % self.odom_topic, flush=True)
+            print(
+                "\n[VINS POSE] No odometry received yet from %s" % self.odom_topic,
+                flush=True,
+            )
             return
 
         current = self.pose_tuple(self.latest)
@@ -88,7 +76,7 @@ class PoseKeyPrinter:
         print("yaw: % .3f deg" % math.degrees(yaw), flush=True)
 
         if self.count == 1:
-            print("This is the reference mark. Return here and press '%s' again." % self.print_key, flush=True)
+            print("This is the reference mark. Return here and trigger another print.", flush=True)
         else:
             dx, dy, dz, horizontal, distance_3d, dyaw = self.delta(current, self.first)
             print(
@@ -98,7 +86,9 @@ class PoseKeyPrinter:
             )
 
         if self.previous is not None:
-            dx, dy, dz, horizontal, distance_3d, dyaw = self.delta(current, self.previous)
+            dx, dy, dz, horizontal, distance_3d, dyaw = self.delta(
+                current, self.previous
+            )
             print(
                 "delta from previous: dx=% .6f m, dy=% .6f m, dz=% .6f m, horizontal=% .6f m, 3d=% .6f m, dyaw=% .3f deg"
                 % (dx, dy, dz, horizontal, distance_3d, dyaw),
@@ -108,27 +98,17 @@ class PoseKeyPrinter:
         self.previous = current
 
     def run(self):
-        if not self.open_tty():
-            return
-
         print("", flush=True)
-        print("[VINS POSE] Press '%s' or Enter in this terminal to print current VINS position." % self.print_key, flush=True)
-        print("[VINS POSE] First print is the reference mark; later prints show loop error from mark #1.", flush=True)
-
-        rate = rospy.Rate(20)
-        try:
-            while not rospy.is_shutdown():
-                ready, _, _ = select.select([self.tty_fd], [], [], 0.0)
-                if ready:
-                    try:
-                        data = os.read(self.tty_fd, 16).decode("utf-8", errors="ignore")
-                    except BlockingIOError:
-                        data = ""
-                    if self.print_key in data or "\n" in data or "\r" in data:
-                        self.print_pose()
-                rate.sleep()
-        finally:
-            self.restore_tty()
+        print(
+            "[VINS POSE] Waiting for trigger messages on %s to print current VINS position."
+            % self.trigger_topic,
+            flush=True,
+        )
+        print(
+            "[VINS POSE] First print is the reference mark; later prints show loop error from mark #1.",
+            flush=True,
+        )
+        rospy.spin()
 
 
 def main():

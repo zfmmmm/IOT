@@ -47,12 +47,12 @@ max_cnt: 190
 min_dist: 25
 freq: 10
 F_threshold: 1.0
-show_track: 1
+show_track: 0
 flow_back: 1
 
 # optimization parameters
-max_solver_time: 0.03
-max_num_iterations: 10
+max_solver_time: 0.04
+max_num_iterations: 15
 keyframe_parallax: 10.0
 
 # IMU parameters from d435i_px4_20260606_142203-imu.yaml used by Kalibr.

@@ -46,7 +46,7 @@
   <node pkg="vins" type="vins_node" name="vins_estimator" output="screen" args="$(arg config_file)" required="true"/>
   <node pkg="vins" type="print_vins_pose_on_key.py" name="print_vins_pose_on_key" output="screen" if="$(arg run_pose_printer)">
     <param name="odom_topic" value="/vins_estimator/odometry"/>
-    <param name="print_key" value="p"/>
+    <param name="trigger_topic" value="/vins_estimator/print_pose"/>
   </node>
   <node pkg="loop_fusion" type="loop_fusion_node" name="loop_fusion" output="screen" args="$(arg config_file)" if="$(arg run_loop)"/>
   <node pkg="rviz" type="rviz" name="vins_rviz" output="log" args="-d $(find vins)/../config/vins_rviz_config.rviz" if="$(arg run_rviz)"/>
