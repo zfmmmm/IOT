@@ -14,6 +14,7 @@ RUN_CAMERA="${RUN_CAMERA:-true}"
 RUN_MAVROS="${RUN_MAVROS:-true}"
 RUN_RVIZ="${RUN_RVIZ:-false}"
 RUN_LOOP="${RUN_LOOP:-false}"
+RUN_POSE_PRINTER="${RUN_POSE_PRINTER:-true}"
 INITIAL_RESET="${INITIAL_RESET:-true}"
 
 if ! docker image inspect "${IMAGE}" >/dev/null 2>&1; then
@@ -33,6 +34,7 @@ docker run --rm -it \
   -e RUN_MAVROS="${RUN_MAVROS}" \
   -e RUN_RVIZ="${RUN_RVIZ}" \
   -e RUN_LOOP="${RUN_LOOP}" \
+  -e RUN_POSE_PRINTER="${RUN_POSE_PRINTER}" \
   -e INITIAL_RESET="${INITIAL_RESET}" \
   -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
   -v /tmp/vins_output:/tmp/vins_output:rw \
@@ -57,5 +59,6 @@ docker run --rm -it \
       run_mavros:="${RUN_MAVROS}" \
       run_rviz:="${RUN_RVIZ}" \
       run_loop:="${RUN_LOOP}" \
+      run_pose_printer:="${RUN_POSE_PRINTER}" \
       initial_reset:="${INITIAL_RESET}"
   '

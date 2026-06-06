@@ -18,6 +18,7 @@ RUN_CAMERA="${RUN_CAMERA:-true}"
 RUN_MAVROS="${RUN_MAVROS:-true}"
 RUN_RVIZ="${RUN_RVIZ:-true}"
 RUN_LOOP="${RUN_LOOP:-false}"
+RUN_POSE_PRINTER="${RUN_POSE_PRINTER:-true}"
 # RealSense device reset is helpful on native Ubuntu, but under WSL the USB
 # device can disappear from the attached session and never come back.
 INITIAL_RESET="${INITIAL_RESET:-false}"
@@ -46,4 +47,5 @@ exec roslaunch vins d435i_px4_vins.launch \
   run_mavros:="${RUN_MAVROS}" \
   run_rviz:="${RUN_RVIZ}" \
   run_loop:="${RUN_LOOP}" \
+  run_pose_printer:="${RUN_POSE_PRINTER}" \
   initial_reset:="${INITIAL_RESET}"
