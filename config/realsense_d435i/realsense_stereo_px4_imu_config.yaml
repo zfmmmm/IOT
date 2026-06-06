@@ -1,0 +1,80 @@
+%YAML:1.0
+
+# D435i stereo infrared images + external PX4/NxtPX4v2 IMU through MAVROS.
+# MAVROS publishes PX4 HIGHRES_IMU as /mavros/imu/data_raw.
+
+# common parameters
+imu: 1
+num_of_cam: 2
+
+imu_topic: "/mavros/imu/data_raw"
+image0_topic: "/camera/infra1/image_rect_raw"
+image1_topic: "/camera/infra2/image_rect_raw"
+output_path: "/tmp/vins_output/"
+
+cam0_calib: "left.yaml"
+cam1_calib: "right.yaml"
+image_width: 640
+image_height: 480
+
+# Calibrated with Kalibr on d435i_px4_20260531_154547.bag.
+# Kalibr reports T_cam_imu; VINS expects T_imu_cam, so these matrices are the inverse.
+estimate_extrinsic: 0
+
+body_T_cam0: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: d
+   data: [ -0.999807975956, -0.0178764893849, 0.00802759871199, 0.00354254664599,
+           -0.00604844212963, -0.108136283258, -0.994117679448, -0.0192264955024,
+            0.0186394088322, -0.993975339418, 0.10800739358, -0.0229907404068,
+           0., 0., 0., 1. ]
+
+body_T_cam1: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: d
+   data: [ -0.999807237365, -0.0178365331169, 0.00820647295126, -0.0456110718005,
+           -0.00623578768705, -0.10786013544, -0.994146521462, -0.0197179962421,
+            0.0186172786371, -0.994006060982, 0.107728119203, -0.0219681478358,
+           0., 0., 0., 1. ]
+
+# Multiple thread support
+multiple_thread: 1
+
+# feature tracker parameters
+max_cnt: 150
+min_dist: 30
+freq: 10
+F_threshold: 1.0
+show_track: 0
+flow_back: 1
+
+# Stereo+IMU initialization guard.  VINS-Fusion's stereo path can otherwise
+# initialize from an almost static window and drift away once motion starts.
+init_min_track_num: 30
+init_min_long_track_num: 25
+init_min_correspondences: 20
+init_min_motion_parallax: 15.0
+init_min_gyro_angle: 0.04
+
+# optimization parameters
+max_solver_time: 0.04
+max_num_iterations: 8
+keyframe_parallax: 10.0
+
+# IMU parameters from config/realsense_d435i/px4_imu_bmi088.yaml used by Kalibr.
+acc_n: 0.02
+gyr_n: 0.0017
+acc_w: 0.0005
+gyr_w: 0.00003
+g_norm: 9.805
+
+# unsynchronization parameters
+estimate_td: 0
+td: 0.0024018673606560842
+
+# loop closure parameters
+load_previous_pose_graph: 0
+pose_graph_save_path: "/tmp/vins_output/pose_graph/"
+save_image: 0

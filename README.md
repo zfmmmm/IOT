@@ -164,6 +164,24 @@ Script `run.sh` can take several flags and arguments. Flag `-k` means KITTI, `-l
 ```
 In Euroc cases, you need open another terminal and play your bag file. If you need modify the code, simply re-run `./run.sh` with proper auguments after your changes.
 
+## 7.1 Native WSL Ubuntu 20.04 Deployment for D435i + PX4 IMU
+
+This repository also contains a native, non-Docker deployment path for the calibrated D435i stereo infrared pair plus external PX4 IMU setup.
+
+Quick path:
+
+```bash
+cd ~/VINS-Fusion
+git submodule update --init --recursive
+INSTALL_PX4_DEPS=true BUILD_PX4=false ./scripts/setup_wsl_native_noetic.sh install
+RUN_RVIZ=true RUN_LOOP=false ./scripts/run_wsl_native_d435i_px4.sh
+```
+
+Detailed instructions:
+
+- native deployment guide: `docs/wsl-native-d435i-px4.md`
+- deployment validation prompt for another AI: `prompts/wsl_native_validation_prompt.md`
+
 
 ## 8. Acknowledgements
 We use [ceres solver](http://ceres-solver.org/) for non-linear optimization and [DBoW2](https://github.com/dorian3d/DBoW2) for loop detection, a generic [camera model](https://github.com/hengli/camodocal) and [GeographicLib](https://geographiclib.sourceforge.io/).

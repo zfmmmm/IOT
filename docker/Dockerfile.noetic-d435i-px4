@@ -1,0 +1,12 @@
+ARG BASE_IMAGE=vins-noetic-d435i:latest
+FROM ${BASE_IMAGE}
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ros-noetic-mavros \
+    ros-noetic-mavros-extras \
+    geographiclib-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN /opt/ros/noetic/lib/mavros/install_geographiclib_datasets.sh || true

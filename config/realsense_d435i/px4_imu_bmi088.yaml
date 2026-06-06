@@ -1,0 +1,11 @@
+# Kalibr IMU model for the NxtPX4/PX4 IMU published by MAVROS.
+# These are safe starting values for camera-IMU temporal/extrinsic calibration.
+# For final VINS tuning, replace them with Allan-variance values from a long
+# stationary recording of this exact flight controller.
+rostopic: /mavros/imu/data_raw
+update_rate: 200.0
+
+accelerometer_noise_density: 0.02
+accelerometer_random_walk: 0.0005
+gyroscope_noise_density: 0.0017
+gyroscope_random_walk: 0.00003

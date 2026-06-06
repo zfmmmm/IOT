@@ -484,6 +484,12 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
             f_manager.triangulate(frame_count, Ps, Rs, tic, ric);
             if (frame_count == WINDOW_SIZE)
             {
+                if (!stereoIMUInitReady())
+                {
+                    marginalization_flag = MARGIN_OLD;
+                    slideWindow();
+                    return;
+                }
                 map<double, ImageFrame>::iterator frame_it;
                 int i = 0;
                 for (frame_it = all_image_frame.begin(); frame_it != all_image_frame.end(); frame_it++)
@@ -575,6 +581,53 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
         last_P0 = Ps[0];
         updateLatestStates();
     }  
+}
+
+bool Estimator::stereoIMUInitReady()
+{
+    double max_parallax = 0.0;
+    int best_correspondences = 0;
+    for (int i = 0; i < WINDOW_SIZE; i++)
+    {
+        vector<pair<Vector3d, Vector3d>> corres = f_manager.getCorresponding(i, WINDOW_SIZE);
+        if ((int)corres.size() < INIT_MIN_CORRESPONDENCES)
+            continue;
+
+        double parallax_sum = 0.0;
+        for (auto &it : corres)
+            parallax_sum += (it.first.head<2>() - it.second.head<2>()).norm();
+        double parallax = parallax_sum / corres.size() * FOCAL_LENGTH;
+        if (parallax > max_parallax)
+        {
+            max_parallax = parallax;
+            best_correspondences = (int)corres.size();
+        }
+    }
+
+    double gyro_angle = 0.0;
+    for (int i = 0; i <= WINDOW_SIZE; i++)
+    {
+        for (size_t j = 0; j < dt_buf[i].size() && j < angular_velocity_buf[i].size(); j++)
+            gyro_angle += angular_velocity_buf[i][j].norm() * dt_buf[i][j];
+    }
+
+    bool enough_tracks = f_manager.last_track_num >= INIT_MIN_TRACK_NUM &&
+                         f_manager.long_track_num >= INIT_MIN_LONG_TRACK_NUM;
+    bool enough_motion = max_parallax >= INIT_MIN_MOTION_PARALLAX &&
+                         gyro_angle >= INIT_MIN_GYRO_ANGLE;
+
+    if (!enough_tracks || !enough_motion)
+    {
+        ROS_WARN_THROTTLE(1.0,
+                          "waiting for stereo+IMU init excitation: tracks %d/%d long %d/%d parallax %.2f/%.2f px corres %d gyro %.3f/%.3f rad",
+                          f_manager.last_track_num, INIT_MIN_TRACK_NUM,
+                          f_manager.long_track_num, INIT_MIN_LONG_TRACK_NUM,
+                          max_parallax, INIT_MIN_MOTION_PARALLAX,
+                          best_correspondences,
+                          gyro_angle, INIT_MIN_GYRO_ANGLE);
+        return false;
+    }
+    return true;
 }
 
 bool Estimator::initialStructure()

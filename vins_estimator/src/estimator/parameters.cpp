@@ -45,6 +45,11 @@ int MIN_DIST;
 double F_THRESHOLD;
 int SHOW_TRACK;
 int FLOW_BACK;
+int INIT_MIN_TRACK_NUM;
+int INIT_MIN_LONG_TRACK_NUM;
+int INIT_MIN_CORRESPONDENCES;
+double INIT_MIN_MOTION_PARALLAX;
+double INIT_MIN_GYRO_ANGLE;
 
 
 template <typename T>
@@ -86,6 +91,11 @@ void readParameters(std::string config_file)
     F_THRESHOLD = fsSettings["F_threshold"];
     SHOW_TRACK = fsSettings["show_track"];
     FLOW_BACK = fsSettings["flow_back"];
+    INIT_MIN_TRACK_NUM = fsSettings["init_min_track_num"].empty() ? 30 : (int)fsSettings["init_min_track_num"];
+    INIT_MIN_LONG_TRACK_NUM = fsSettings["init_min_long_track_num"].empty() ? 25 : (int)fsSettings["init_min_long_track_num"];
+    INIT_MIN_CORRESPONDENCES = fsSettings["init_min_correspondences"].empty() ? 20 : (int)fsSettings["init_min_correspondences"];
+    INIT_MIN_MOTION_PARALLAX = fsSettings["init_min_motion_parallax"].empty() ? 15.0 : (double)fsSettings["init_min_motion_parallax"];
+    INIT_MIN_GYRO_ANGLE = fsSettings["init_min_gyro_angle"].empty() ? 0.04 : (double)fsSettings["init_min_gyro_angle"];
 
     MULTIPLE_THREAD = fsSettings["multiple_thread"];
 
