@@ -44,6 +44,7 @@ Usage:
   scripts/d435i_px4_kalibr.sh record
   scripts/d435i_px4_kalibr.sh calibrate-cam <bag>
   scripts/d435i_px4_kalibr.sh calibrate-imu <bag> [camchain.yaml]
+  scripts/d435i_px4_kalibr.sh embed-vins <bag> [camchain-imucam.yaml]
   scripts/d435i_px4_kalibr.sh pack <bag>
 
 Environment overrides:
@@ -104,6 +105,11 @@ to_repo_path() {
 
 latest_camchain() {
   find "${RESULT_DIR}/cam" "${BAG_DIR}" -type f \( -name 'camchain-*.yaml' -o -name '*-camchain.yaml' \) -printf '%T@ %p\n' 2>/dev/null \
+    | sort -n | tail -1 | cut -d' ' -f2-
+}
+
+latest_imucam() {
+  find "${RESULT_DIR}/imu" "${BAG_DIR}" -type f \( -name '*camchain-imucam.yaml' -o -name 'camchain-imucam.yaml' \) -printf '%T@ %p\n' 2>/dev/null \
     | sort -n | tail -1 | cut -d' ' -f2-
 }
 
@@ -433,7 +439,223 @@ calibrate_imu() {
   echo "Camera-IMU calibration outputs:"
   find "${RESULT_DIR}/imu/${base}_imu" -maxdepth 1 -type f | sort
   echo
-  echo "Send me the camchain and imu result YAML/PDF, then I will write the VINS config conversion."
+  echo "Next: scripts/d435i_px4_kalibr.sh embed-vins ${bag} \$(find ${RESULT_DIR}/imu/${base}_imu -name '*camchain-imucam.yaml' | head -1)"
+}
+
+embed_vins() {
+  mkdirs
+  local bag="${1:-}"
+  local imucam="${2:-}"
+  [[ -n "${bag}" ]] || die "missing bag path"
+
+  local bag_abs base camchain imu_yaml imucam_abs backup_dir
+  bag_abs="$(abs_path "${bag}")"
+  [[ -f "${bag_abs}" ]] || die "missing bag: ${bag_abs}"
+  base="$(basename "${bag_abs}" .bag)"
+
+  camchain="$(find "${BAG_DIR}" "${RESULT_DIR}/cam" -type f -name "${base}*camchain.yaml" | sort | tail -1)"
+  [[ -n "${camchain}" ]] || die "could not find camera camchain for ${base}"
+
+  if [[ -z "${imucam}" ]]; then
+    imucam="$(find "${BAG_DIR}" "${RESULT_DIR}/imu" -type f -name "${base}*camchain-imucam.yaml" | sort | tail -1)"
+    if [[ -z "${imucam}" ]]; then
+      imucam="$(latest_imucam)"
+    fi
+  fi
+  [[ -n "${imucam}" ]] || die "missing camchain-imucam yaml; pass it explicitly"
+  imucam_abs="$(abs_path "${imucam}")"
+  [[ -f "${imucam_abs}" ]] || die "missing camchain-imucam yaml: ${imucam_abs}"
+
+  imu_yaml="$(find "${BAG_DIR}" "${RESULT_DIR}/imu" -type f -name "${base}*imu.yaml" ! -name '*camchain*' | sort | tail -1)"
+  [[ -n "${imu_yaml}" ]] || imu_yaml="${IMU_YAML}"
+  [[ -f "${imu_yaml}" ]] || die "missing imu yaml: ${imu_yaml}"
+
+  backup_dir="${REPO_DIR}/config/realsense_d435i/backup/${base}_$(date +%Y%m%d_%H%M%S)"
+  mkdir -p "${backup_dir}"
+  cp -f "${REPO_DIR}/config/realsense_d435i/left.yaml" "${backup_dir}/left.yaml"
+  cp -f "${REPO_DIR}/config/realsense_d435i/right.yaml" "${backup_dir}/right.yaml"
+  cp -f "${REPO_DIR}/config/realsense_d435i/realsense_stereo_px4_imu_config.yaml" "${backup_dir}/realsense_stereo_px4_imu_config.yaml"
+
+  python3 - "${camchain}" "${imucam_abs}" "${imu_yaml}" "${REPO_DIR}" "${base}" <<'PY'
+import sys
+from pathlib import Path
+import yaml
+
+camchain_path = Path(sys.argv[1])
+imucam_path = Path(sys.argv[2])
+imu_path = Path(sys.argv[3])
+repo_dir = Path(sys.argv[4])
+base = sys.argv[5]
+
+cfg_dir = repo_dir / "config" / "realsense_d435i"
+left_path = cfg_dir / "left.yaml"
+right_path = cfg_dir / "right.yaml"
+vins_path = cfg_dir / "realsense_stereo_px4_imu_config.yaml"
+
+with camchain_path.open() as f:
+    camchain = yaml.safe_load(f)
+with imucam_path.open() as f:
+    imucam = yaml.safe_load(f)
+with Path(imu_path).open() as f:
+    imu = yaml.safe_load(f)
+
+def invert_t(T):
+    R = [row[:3] for row in T[:3]]
+    t = [row[3] for row in T[:3]]
+    Rt = [[R[j][i] for j in range(3)] for i in range(3)]
+    tinv = [-(Rt[i][0] * t[0] + Rt[i][1] * t[1] + Rt[i][2] * t[2]) for i in range(3)]
+    return [
+        Rt[0] + [tinv[0]],
+        Rt[1] + [tinv[1]],
+        Rt[2] + [tinv[2]],
+        [0.0, 0.0, 0.0, 1.0],
+    ]
+
+def fmt_float(v):
+    if abs(v) < 1e-12:
+        return "0."
+    s = f"{v:.12g}"
+    if "e" not in s and "E" not in s and "." not in s:
+        s += ".0"
+    return s
+
+def write_camera(path, cam):
+    fx, fy, cx, cy = cam["intrinsics"]
+    k1, k2, p1, p2 = cam["distortion_coeffs"]
+    width, height = cam["resolution"]
+    text = f"""%YAML:1.0
+---
+model_type: PINHOLE
+camera_name: camera
+image_width: {width}
+image_height: {height}
+distortion_parameters:
+   k1: {fmt_float(k1)}
+   k2: {fmt_float(k2)}
+   p1: {fmt_float(p1)}
+   p2: {fmt_float(p2)}
+projection_parameters:
+   fx: {fmt_float(fx)}
+   fy: {fmt_float(fy)}
+   cx: {fmt_float(cx)}
+   cy: {fmt_float(cy)}
+"""
+    path.write_text(text)
+
+def opencv_matrix_block(name, T):
+    flat = [T[r][c] for r in range(4) for c in range(4)]
+    rows = [
+        ", ".join(fmt_float(v) for v in flat[i:i+4])
+        for i in range(0, 16, 4)
+    ]
+    data = ",\n           ".join(rows)
+    return f"""{name}: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: d
+   data: [ {data} ]
+"""
+
+cam0 = camchain["cam0"]
+cam1 = camchain["cam1"]
+imu0 = imu["imu0"]
+imucam0 = imucam["cam0"]
+imucam1 = imucam["cam1"]
+
+body_T_cam0 = invert_t(imucam0["T_cam_imu"])
+body_T_cam1 = invert_t(imucam1["T_cam_imu"])
+td = -float(imucam0.get("timeshift_cam_imu", 0.0))
+
+write_camera(left_path, cam0)
+write_camera(right_path, cam1)
+
+vins_text = f"""%YAML:1.0
+
+# D435i stereo infrared images + external PX4/NxtPX4v2 IMU through MAVROS.
+# MAVROS publishes PX4 HIGHRES_IMU as /mavros/imu/data_raw.
+
+# common parameters
+imu: 1
+num_of_cam: 2
+
+imu_topic: "/mavros/imu/data_raw"
+image0_topic: "/camera/infra1/image_rect_raw"
+image1_topic: "/camera/infra2/image_rect_raw"
+output_path: "/tmp/vins_output/"
+
+cam0_calib: "left.yaml"
+cam1_calib: "right.yaml"
+image_width: 640
+image_height: 480
+
+estimate_extrinsic: 0
+
+# Calibrated with Kalibr on {base}.bag.
+# Kalibr reports T_cam_imu; VINS expects T_imu_cam, so these matrices are the inverse.
+{opencv_matrix_block("body_T_cam0", body_T_cam0).rstrip()}
+
+{opencv_matrix_block("body_T_cam1", body_T_cam1).rstrip()}
+
+# Multiple thread support
+multiple_thread: 1
+
+# feature tracker parameters
+max_cnt: 150
+min_dist: 30
+freq: 10
+F_threshold: 1.0
+show_track: 0
+flow_back: 1
+
+# optimization parameters
+max_solver_time: 0.04
+max_num_iterations: 8
+keyframe_parallax: 10.0
+
+# IMU parameters from {Path(imu_path).name} used by Kalibr.
+acc_n: {fmt_float(float(imu0['accelerometer_noise_density']))}
+gyr_n: {fmt_float(float(imu0['gyroscope_noise_density']))}
+acc_w: {fmt_float(float(imu0['accelerometer_random_walk']))}
+gyr_w: {fmt_float(float(imu0['gyroscope_random_walk']))}
+g_norm: 9.805
+
+# unsynchronization parameters
+estimate_td: 0
+td: {fmt_float(td)}
+
+# loop closure parameters
+load_previous_pose_graph: 0
+pose_graph_save_path: "/tmp/vins_output/pose_graph/"
+save_image: 0
+"""
+
+vins_path.write_text(vins_text)
+
+print("Imported calibration into VINS config.")
+print(f"  camchain: {camchain_path}")
+print(f"  camchain-imucam: {imucam_path}")
+print(f"  imu yaml: {imu_path}")
+print(f"  left.yaml intrinsics: {cam0['intrinsics']}")
+print(f"  left.yaml distortion: {cam0['distortion_coeffs']}")
+print(f"  right.yaml intrinsics: {cam1['intrinsics']}")
+print(f"  right.yaml distortion: {cam1['distortion_coeffs']}")
+print(f"  realsense_stereo_px4_imu_config.yaml body_T_cam0 from inverse(T_cam_imu cam0)")
+print(f"  realsense_stereo_px4_imu_config.yaml body_T_cam1 from inverse(T_cam_imu cam1)")
+print(f"  realsense_stereo_px4_imu_config.yaml td: {td}")
+print(f"  realsense_stereo_px4_imu_config.yaml acc_n: {imu0['accelerometer_noise_density']}")
+print(f"  realsense_stereo_px4_imu_config.yaml gyr_n: {imu0['gyroscope_noise_density']}")
+print(f"  realsense_stereo_px4_imu_config.yaml acc_w: {imu0['accelerometer_random_walk']}")
+print(f"  realsense_stereo_px4_imu_config.yaml gyr_w: {imu0['gyroscope_random_walk']}")
+PY
+
+  echo
+  echo "Backups:"
+  find "${backup_dir}" -maxdepth 1 -type f | sort
+  echo
+  echo "Imported into:"
+  echo "  ${REPO_DIR}/config/realsense_d435i/left.yaml"
+  echo "  ${REPO_DIR}/config/realsense_d435i/right.yaml"
+  echo "  ${REPO_DIR}/config/realsense_d435i/realsense_stereo_px4_imu_config.yaml"
 }
 
 pack() {
@@ -463,6 +685,7 @@ case "${cmd}" in
   record) record "$@" ;;
   calibrate-cam) calibrate_cam "$@" ;;
   calibrate-imu) calibrate_imu "$@" ;;
+  embed-vins) embed_vins "$@" ;;
   pack) pack "$@" ;;
   *) usage; die "unknown command: ${cmd}" ;;
 esac
