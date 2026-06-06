@@ -17,7 +17,7 @@ cam1_calib: "right.yaml"
 image_width: 640
 image_height: 480
 
-estimate_extrinsic: 1
+estimate_extrinsic: 0
 
 # Calibrated with Kalibr on d435i_px4_20260606_180824.bag.
 # Kalibr reports T_cam_imu; VINS expects T_imu_cam, so these matrices are the inverse.
@@ -69,4 +69,5 @@ td: -0.000669290608484
 # loop closure parameters
 load_previous_pose_graph: 0
 pose_graph_save_path: "/tmp/vins_output/pose_graph/"
-save_image: 0
+save_image: 1
+show_track: 1
