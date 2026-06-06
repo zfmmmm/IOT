@@ -17,26 +17,26 @@ cam1_calib: "right.yaml"
 image_width: 640
 image_height: 480
 
-estimate_extrinsic: 1
+estimate_extrinsic: 0
 
-# Calibrated with Kalibr on d435i_px4_20260606_180824.bag.
+# Calibrated with Kalibr on d435i_px4_20260606_142203.bag.
 # Kalibr reports T_cam_imu; VINS expects T_imu_cam, so these matrices are the inverse.
 body_T_cam0: !!opencv-matrix
    rows: 4
    cols: 4
    dt: d
-   data: [ -0.99899937278, -0.012291573242, -0.0430019814961, 0.0167570302372,
-           0.0444103109686, -0.158916313398, -0.986292720046, -0.0160595462522,
-           0.00528937283831, -0.987215540074, 0.15930317, -0.0239205214303,
+   data: [ -0.998816621039, -0.013383310472, -0.0467572939399, 0.0214250800901,
+           0.0483510026314, -0.1695150467, -0.984340809622, -0.0146495463997,
+           0.00524767379962, -0.98543672346, 0.16996154264, -0.0303315608667,
            0., 0., 0., 1.0 ]
 
 body_T_cam1: !!opencv-matrix
    rows: 4
    cols: 4
    dt: d
-   data: [ -0.999054070443, -0.012154090196, -0.041752154704, -0.0324095425631,
-           0.043152985036, -0.158641273845, -0.986392805182, -0.0141963994606,
-           0.00536509211488, -0.98726147718, 0.159015695647, -0.0235341316162,
+   data: [ -0.998863938517, -0.0133275446792, -0.0457515997978, -0.0278449631542,
+           0.0473481994514, -0.169110667995, -0.984459105285, -0.0126878353808,
+           0.00538333910684, -0.985506955086, 0.169549583123, -0.0299146577016,
            0., 0., 0., 1.0 ]
 
 # Multiple thread support
@@ -55,7 +55,7 @@ max_solver_time: 0.04
 max_num_iterations: 8
 keyframe_parallax: 10.0
 
-# IMU parameters from d435i_px4_20260606_180824-imu.yaml used by Kalibr.
+# IMU parameters from d435i_px4_20260606_142203-imu.yaml used by Kalibr.
 acc_n: 0.02
 gyr_n: 0.0017
 acc_w: 0.0005
@@ -63,8 +63,8 @@ gyr_w: 3e-05
 g_norm: 9.805
 
 # unsynchronization parameters
-estimate_td: 1
-td: -0.000669290608484
+estimate_td: 0
+td: 0.00605930175888
 
 # loop closure parameters
 load_previous_pose_graph: 0
