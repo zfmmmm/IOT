@@ -1,0 +1,31 @@
+FROM ros:noetic-perception
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    libatlas-base-dev \
+    libceres-dev \
+    libeigen3-dev \
+    libgoogle-glog-dev \
+    libopencv-dev \
+    libsuitesparse-dev \
+    python3-catkin-tools \
+    python3-pip \
+    python3-yaml \
+    ros-noetic-camera-info-manager \
+    ros-noetic-cv-bridge \
+    ros-noetic-dynamic-reconfigure \
+    ros-noetic-image-transport \
+    ros-noetic-image-view \
+    ros-noetic-message-filters \
+    ros-noetic-realsense2-camera \
+    ros-noetic-tf \
+    ros-noetic-topic-tools \
+    usbutils \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV TERM=xterm
+ENV PYTHONIOENCODING=UTF-8

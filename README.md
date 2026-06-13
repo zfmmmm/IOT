@@ -182,6 +182,27 @@ Detailed instructions:
 - native deployment guide: `docs/wsl-native-d435i-px4.md`
 - deployment validation prompt for another AI: `prompts/wsl_native_validation_prompt.md`
 
+## 7.2 Ubuntu 24.04 Docker Deployment for D435i + PX4 IMU
+
+For a real Ubuntu 24.04 machine, use the Docker deployment path because ROS Noetic is not a native Ubuntu 24.04 target.
+
+Quick path:
+
+```bash
+cd ~
+git clone -b wsl-native-release https://github.com/zfmmmm/IOT.git VINS-Fusion
+cd ~/VINS-Fusion
+git submodule sync --recursive
+git submodule update --init --recursive
+./scripts/setup_ubuntu24_docker.sh
+./scripts/d435i_px4_kalibr.sh check
+RUN_RVIZ=true RUN_LOOP=false ./docker/run_d435i_px4.sh
+```
+
+Detailed instructions:
+
+- Ubuntu 24.04 Docker guide: `docs/ubuntu24-docker-d435i-px4.md`
+
 
 ## 8. Acknowledgements
 We use [ceres solver](http://ceres-solver.org/) for non-linear optimization and [DBoW2](https://github.com/dorian3d/DBoW2) for loop detection, a generic [camera model](https://github.com/hengli/camodocal) and [GeographicLib](https://geographiclib.sourceforge.io/).

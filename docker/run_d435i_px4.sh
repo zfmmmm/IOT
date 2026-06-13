@@ -179,7 +179,7 @@ docker run --rm -it \
         while kill -0 "${LAUNCH_PID}" 2>/dev/null; do
           if IFS= read -r -s -n1 -t 0.2 key; then
             if [[ -z "${key}" || "${key}" == "p" || "${key}" == "P" ]]; then
-              rostopic pub -1 /vins_estimator/print_pose std_msgs/Empty "{}" >/dev/null
+              rostopic pub -1 /vins_estimator/print_pose std_msgs/Empty "{}" >/dev/null || true
             fi
           fi
         done
